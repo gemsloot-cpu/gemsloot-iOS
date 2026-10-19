@@ -61,5 +61,6 @@ targets:
       - sdk: CoreLocation.framework
       - sdk: Security.framework
       - sdk: WebKit.framework
+      - sdk: SwiftUI.framework
     scheme:
       testTargets: []

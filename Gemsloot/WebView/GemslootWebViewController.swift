@@ -11,16 +11,32 @@ final class GemslootWebViewController: UIViewController {
     private let refreshControl = UIRefreshControl()
     private var scriptHandlerProxy: WeakScriptMessageHandler?
 
+    override var canBecomeFirstResponder: Bool { true }
+
     override func viewDidLoad() {
         super.viewDidLoad()
         view.backgroundColor = .gemslootBackground
         configureWebView()
+        installDiagnosticGestures()
         loadHome()
+    }
+
+    override func viewDidAppear(_ animated: Bool) {
+        super.viewDidAppear(animated)
+        becomeFirstResponder()
     }
 
     override func viewDidLayoutSubviews() {
         super.viewDidLayoutSubviews()
         updateSafeAreaCSSVariable()
+    }
+
+    override func motionEnded(_ motion: UIEvent.EventSubtype, with event: UIEvent?) {
+        if motion == .motionShake {
+            presentDiagnostics()
+        } else {
+            super.motionEnded(motion, with: event)
+        }
     }
 
     deinit {
@@ -88,6 +104,12 @@ final class GemslootWebViewController: UIViewController {
         installBridgeScript(on: webView.configuration.userContentController, safeAreaTop: safeTop)
     }
 
+    /// Diagnostics “Apply & Reload”: rebuild baked bridge config and hard-load gemsloot.com.
+    func applyBridgeConfigAndReload() {
+        rebuildBridgeScriptForNextLoad()
+        webView.load(URLRequest(url: startURL))
+    }
+
     private func loadHome() {
         webView.load(URLRequest(url: startURL))
     }
@@ -95,6 +117,39 @@ final class GemslootWebViewController: UIViewController {
     @objc private func reloadFromRefresh() {
         rebuildBridgeScriptForNextLoad()
         webView.reload()
+    }
+
+    // MARK: - Diagnostic HUD gestures
+
+    private func installDiagnosticGestures() {
+        let makeRecognizer = { () -> UITapGestureRecognizer in
+            let threeFinger = UITapGestureRecognizer(target: self, action: #selector(self.threeFingerTapRecognized))
+            threeFinger.numberOfTapsRequired = 1
+            threeFinger.numberOfTouchesRequired = 3
+            threeFinger.cancelsTouchesInView = false
+            threeFinger.delegate = self
+            return threeFinger
+        }
+        webView.addGestureRecognizer(makeRecognizer())
+        view.addGestureRecognizer(makeRecognizer())
+    }
+
+    @objc private func threeFingerTapRecognized() {
+        presentDiagnostics()
+    }
+
+    func presentDiagnostics() {
+        guard !isPresentingDiagnostics else { return }
+        // Don't stack if a sheet is already up.
+        if presentedViewController != nil { return }
+        isPresentingDiagnostics = true
+        let host = TrackingDiagnosticsPresenter.makeHostingController { [weak self] in
+            self?.applyBridgeConfigAndReload()
+        }
+        host.presentationController?.delegate = self
+        present(host, animated: true) { [weak self] in
+            self?.isPresentingDiagnostics = false
+        }
     }
 
     private func updateSafeAreaCSSVariable() {
@@ -216,6 +271,24 @@ extension GemslootWebViewController: WKUIDelegate {
         )
         present(tracker, animated: true)
         return tracker.webView
+    }
+}
+
+// MARK: - Gesture / presentation delegates
+
+extension GemslootWebViewController: UIGestureRecognizerDelegate {
+    func gestureRecognizer(
+        _ gestureRecognizer: UIGestureRecognizer,
+        shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer
+    ) -> Bool {
+        true
+    }
+}
+
+extension GemslootWebViewController: UIAdaptivePresentationControllerDelegate {
+    func presentationControllerDidDismiss(_ presentationController: UIPresentationController) {
+        isPresentingDiagnostics = false
+        becomeFirstResponder()
     }
 }
 
