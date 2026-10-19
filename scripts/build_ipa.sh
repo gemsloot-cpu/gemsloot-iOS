@@ -55,6 +55,12 @@ if [[ -z "${APP_PATH}" || ! -d "${APP_PATH}" ]]; then
 Check xcodebuild logs above."
 fi
 
+# Confirm AppIcon asset catalog compiled into the app (Assets.car).
+if [[ ! -f "${APP_PATH}/Assets.car" ]]; then
+  die "Assets.car missing from ${APP_PATH} — AppIcon catalog may not be linked (check ASSETCATALOG_COMPILER_APPICON_NAME / Assets.xcassets)."
+fi
+echo "==> App icon assets present (Assets.car $(wc -c < "${APP_PATH}/Assets.car") bytes)"
+
 echo "==> Packaging ${APP_PATH} → build/Gemsloot-iOS.ipa"
 rm -rf build/Payload
 mkdir -p build/Payload

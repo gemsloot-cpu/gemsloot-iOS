@@ -27,6 +27,7 @@ targets:
         SWIFT_VERSION: "5.9"
         GENERATE_INFOPLIST_FILE: false
         INFOPLIST_FILE: Gemsloot/Info.plist
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         # Intentionally omit WKAppBoundDomains — offerwall iframes must not be restricted.
         # Unsigned CI builds set CODE_SIGNING_* via scripts/build_ipa.sh.
     info:
