@@ -1,0 +1,64 @@
+name: Gemsloot
+options:
+  bundleIdPrefix: com.gemsloot
+  deploymentTarget:
+    iOS: "16.0"
+  createIntermediateGroups: true
+  groupSortPosition: top
+settings:
+  SWIFT_VERSION: "5.0"
+  TARGETED_DEVICE_FAMILY: "1"
+targets:
+  Gemsloot:
+    type: application
+    platform: iOS
+    deploymentTarget: "16.0"
+    sources:
+      - path: Gemsloot
+        excludes:
+          - "**/.DS_Store"
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.gemsloot.ios
+        PRODUCT_NAME: Gemsloot
+        MARKETING_VERSION: "1.0.0"
+        CURRENT_PROJECT_VERSION: "1"
+        TARGETED_DEVICE_FAMILY: "1"
+        SWIFT_VERSION: "5.0"
+        GENERATE_INFOPLIST_FILE: false
+        INFOPLIST_FILE: Gemsloot/Info.plist
+        # Intentionally omit WKAppBoundDomains — offerwall iframes must not be restricted.
+    info:
+      path: Gemsloot/Info.plist
+      properties:
+        CFBundleDisplayName: Gemsloot
+        CFBundleName: Gemsloot
+        CFBundleShortVersionString: "$(MARKETING_VERSION)"
+        CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
+        CFBundlePackageType: APPL
+        LSRequiresIPhoneOS: true
+        UILaunchScreen: {}
+        UIRequiresFullScreen: true
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+        UIApplicationSupportsIndirectInputEvents: true
+        ITSAppUsesNonExemptEncryption: false
+        NSUserTrackingUsageDescription: >-
+          Gemsloot uses your device advertising identifier to attribute installs
+          and personalize offers shown in the app.
+        NSLocationWhenInUseUsageDescription: >-
+          Gemsloot uses your location while you use the app to show offers
+          available in your region.
+        UIApplicationSceneManifest:
+          UIApplicationSupportsMultipleScenes: false
+          UISceneConfigurations:
+            UIWindowSceneSessionRoleApplication:
+              - UISceneConfigurationName: Default Configuration
+                UISceneDelegateClassName: $(PRODUCT_MODULE_NAME).SceneDelegate
+    dependencies:
+      - sdk: AdSupport.framework
+      - sdk: AppTrackingTransparency.framework
+      - sdk: CoreLocation.framework
+      - sdk: Security.framework
+    scheme:
+      testTargets: []
