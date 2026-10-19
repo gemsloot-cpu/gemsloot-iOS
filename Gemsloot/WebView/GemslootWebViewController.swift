@@ -3,7 +3,7 @@ import WebKit
 
 /// Full-screen WKWebView shell loading `https://gemsloot.com` with the Step 2 bridge.
 final class GemslootWebViewController: UIViewController {
-    private static let safariUserAgent =
+    static let safariUserAgent =
         "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1"
 
     private let startURL = URL(string: "https://gemsloot.com")!
@@ -146,6 +146,43 @@ extension GemslootWebViewController: WKScriptMessageHandler {
 // MARK: - Navigation / UI
 
 extension GemslootWebViewController: WKNavigationDelegate {
+    func webView(
+        _ webView: WKWebView,
+        decidePolicyFor navigationAction: WKNavigationAction,
+        decisionHandler: @escaping (WKNavigationActionPolicy) -> Void
+    ) {
+        guard let url = navigationAction.request.url else {
+            decisionHandler(.allow)
+            return
+        }
+
+        // App Store / store links → native handoff (main frame or redirect).
+        if ExternalNavigation.isAppStoreURL(url) {
+            AppState.shared.appendRedirectHop(url: url.absoluteString, statusCodeOrType: "AppStore")
+            decisionHandler(.cancel)
+            UIApplication.shared.open(url, options: [:], completionHandler: nil)
+            return
+        }
+
+        // Other external schemes (mail, Telegram, Discord, …).
+        if ExternalNavigation.isExternalScheme(url) {
+            AppState.shared.appendRedirectHop(url: url.absoluteString, statusCodeOrType: "external")
+            decisionHandler(.cancel)
+            UIApplication.shared.open(url, options: [:], completionHandler: nil)
+            return
+        }
+
+        // `_api/auth` OAuth return on gemsloot.com — allow in-place so cookies stay on
+        // `WKWebsiteDataStore.default()` (shared with popup WebViews from createWebViewWith).
+        if ExternalNavigation.isGemslootAuthCallback(url) {
+            AppState.shared.appendRedirectHop(url: url.absoluteString, statusCodeOrType: "oauth-callback")
+            decisionHandler(.allow)
+            return
+        }
+
+        decisionHandler(.allow)
+    }
+
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
         refreshControl.endRefreshing()
         updateSafeAreaCSSVariable()
@@ -165,17 +202,20 @@ extension GemslootWebViewController: WKNavigationDelegate {
 }
 
 extension GemslootWebViewController: WKUIDelegate {
-    // Minimal stub so `javaScriptCanOpenWindowsAutomatically` has a delegate; no App Store routing yet.
+    /// Offerwall / OAuth `window.open` — present popup WebView with the **same** configuration
+    /// so `window.opener` remains connected; return that WebView (not nil / not the main one).
     func webView(
         _ webView: WKWebView,
         createWebViewWith configuration: WKWebViewConfiguration,
         for navigationAction: WKNavigationAction,
         windowFeatures: WKWindowFeatures
     ) -> WKWebView? {
-        if navigationAction.targetFrame == nil, let url = navigationAction.request.url {
-            webView.load(URLRequest(url: url))
-        }
-        return nil
+        let tracker = TrackerRedirectViewController(
+            configuration: configuration,
+            initialAction: navigationAction
+        )
+        present(tracker, animated: true)
+        return tracker.webView
     }
 }
 

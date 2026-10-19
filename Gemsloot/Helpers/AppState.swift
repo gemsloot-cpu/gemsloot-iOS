@@ -31,6 +31,32 @@ final class AppState {
         var recordedAt: Date
     }
 
+    /// One hop in an offerwall / OAuth / App Store redirect chain (Step 3).
+    struct RedirectHop: Equatable, Identifiable {
+        let id: UUID
+        let timestamp: Date
+        let url: String
+        /// HTTP status as string, or a type label (`navigation`, `AppStore`, `external`, `idfa-rewrite`).
+        let statusCodeOrType: String
+        let idfaInjected: Bool
+
+        init(
+            id: UUID = UUID(),
+            timestamp: Date = Date(),
+            url: String,
+            statusCodeOrType: String,
+            idfaInjected: Bool = false
+        ) {
+            self.id = id
+            self.timestamp = timestamp
+            self.url = url
+            self.statusCodeOrType = statusCodeOrType
+            self.idfaInjected = idfaInjected
+        }
+    }
+
+    private static let maxRedirectLogs = 50
+
     private enum DefaultsKey {
         static let deviceHeaderMode = "gemsloot.deviceHeaderMode"
         static let lockFingerprintHash = "gemsloot.lockFingerprintHash"
@@ -55,6 +81,17 @@ final class AppState {
 
     private(set) var idfa: UUID?
     private(set) var lastFfTelemetry: FfTelemetry?
+
+    /// Flat redirect / popup hop log (most recent ≤ 50). Used by the future Diagnostic HUD.
+    private(set) var redirectLogs: [RedirectHop] = []
+
+    /// Non-zero hardware IDFA string when ATT-authorized; otherwise `nil`.
+    var hardwareIDFA: String? {
+        guard let idfa else { return nil }
+        let value = idfa.uuidString
+        if value.lowercased().hasPrefix("00000000") { return nil }
+        return value
+    }
 
     /// Exact JSON string for Mode 1 replay (`{hash,data,formated_data}`), if captured.
     var lockedFfBodyJSON: String? {
@@ -160,6 +197,36 @@ final class AppState {
             status: status,
             recordedAt: Date()
         )
+    }
+
+    /// Append a redirect hop on the main queue; keeps only the most recent 50.
+    func appendRedirectHop(
+        url: String,
+        statusCodeOrType: String,
+        idfaInjected: Bool = false
+    ) {
+        let hop = RedirectHop(url: url, statusCodeOrType: statusCodeOrType, idfaInjected: idfaInjected)
+        let apply = { [weak self] in
+            guard let self else { return }
+            self.redirectLogs.append(hop)
+            if self.redirectLogs.count > Self.maxRedirectLogs {
+                self.redirectLogs.removeFirst(self.redirectLogs.count - Self.maxRedirectLogs)
+            }
+        }
+        if Thread.isMainThread {
+            apply()
+        } else {
+            DispatchQueue.main.async(execute: apply)
+        }
+    }
+
+    func clearRedirectLogs() {
+        let clear = { [weak self] in self?.redirectLogs.removeAll() }
+        if Thread.isMainThread {
+            clear()
+        } else {
+            DispatchQueue.main.async(execute: clear)
+        }
     }
 
     // MARK: - Branch A payload (Capacitor-shaped)
