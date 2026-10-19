@@ -1,11 +1,9 @@
 import UIKit
-import AppTrackingTransparency
 import CoreLocation
 
 @main
 final class AppDelegate: UIResponder, UIApplicationDelegate {
     private let locationManager = CLLocationManager()
-    private var didRequestTrackingThisLaunch = false
 
     func application(
         _ application: UIApplication,
@@ -14,12 +12,8 @@ final class AppDelegate: UIResponder, UIApplicationDelegate {
         // Ensure Keychain master seed + derived ids exist before WebView / ff bridge work.
         _ = AppState.shared.keychainUUID
         requestLocationAuthorizationIfNeeded()
+        // ATT is requested from GemslootWebViewController.viewDidAppear (after UI is visible).
         return true
-    }
-
-    func applicationDidBecomeActive(_ application: UIApplication) {
-        // ATT must be requested while the app is active; Apple shows the system prompt once.
-        requestTrackingAuthorizationIfNeeded()
     }
 
     // MARK: - Scene session lifecycle
@@ -32,21 +26,7 @@ final class AppDelegate: UIResponder, UIApplicationDelegate {
         UISceneConfiguration(name: "Default Configuration", sessionRole: connectingSceneSession.role)
     }
 
-    // MARK: - Privacy prompts
-
-    private func requestTrackingAuthorizationIfNeeded() {
-        guard !didRequestTrackingThisLaunch else { return }
-        didRequestTrackingThisLaunch = true
-
-        // Defer slightly so the first frame is on-screen before the system dialog.
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-            ATTrackingManager.requestTrackingAuthorization { status in
-                DispatchQueue.main.async {
-                    AppState.shared.refreshIDFA(trackingStatus: status)
-                }
-            }
-        }
-    }
+    // MARK: - Location
 
     private func requestLocationAuthorizationIfNeeded() {
         switch locationManager.authorizationStatus {

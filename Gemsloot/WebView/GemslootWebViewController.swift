@@ -1,5 +1,6 @@
 import UIKit
 import WebKit
+import AppTrackingTransparency
 
 /// Full-screen WKWebView shell loading `https://gemsloot.com` with the Step 2 bridge.
 final class GemslootWebViewController: UIViewController {
@@ -10,6 +11,8 @@ final class GemslootWebViewController: UIViewController {
     private var webView: WKWebView!
     private let refreshControl = UIRefreshControl()
     private var scriptHandlerProxy: WeakScriptMessageHandler?
+    /// Ensures we only schedule the post-appear ATT delay once per VC lifetime.
+    private var didScheduleATTPrompt = false
 
     override var canBecomeFirstResponder: Bool { true }
 
@@ -24,6 +27,29 @@ final class GemslootWebViewController: UIViewController {
     override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
         becomeFirstResponder()
+        scheduleATTPromptIfNeeded()
+    }
+
+    /// ATT must run after the first frame is on-screen; early requests leave status `.notDetermined`.
+    private func scheduleATTPromptIfNeeded() {
+        guard !didScheduleATTPrompt else { return }
+        guard ATTrackingManager.trackingAuthorizationStatus == .notDetermined else {
+            AppState.shared.refreshIDFA()
+            return
+        }
+        didScheduleATTPrompt = true
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
+            guard self != nil else { return }
+            guard ATTrackingManager.trackingAuthorizationStatus == .notDetermined else {
+                AppState.shared.refreshIDFA()
+                return
+            }
+            ATTrackingManager.requestTrackingAuthorization { status in
+                DispatchQueue.main.async {
+                    AppState.shared.refreshIDFA(trackingStatus: status)
+                }
+            }
+        }
     }
 
     override func viewDidLayoutSubviews() {

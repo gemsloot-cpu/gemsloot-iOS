@@ -61,7 +61,7 @@ struct TrackingDiagnosticsSheet: View {
 
     private var identitySection: some View {
         sectionCard(title: "Identity & Permissions") {
-            HStack {
+            HStack(spacing: 8) {
                 Text("ATT")
                     .foregroundStyle(.secondary)
                 Spacer()
@@ -74,10 +74,33 @@ struct TrackingDiagnosticsSheet: View {
                     .clipShape(Capsule())
             }
 
+            if ATTrackingManager.trackingAuthorizationStatus == .notDetermined {
+                Button {
+                    requestATTFromHUD()
+                } label: {
+                    labelButton("Request ATT Permission", systemImage: "hand.raised.fill")
+                }
+            }
+
             copyRow(label: "Hardware IDFA", value: AppState.shared.hardwareIDFA ?? "(unavailable)")
             copyRow(label: "keychainUUID", value: AppState.shared.keychainUUID)
             copyRow(label: "deterministicBase36Hash", value: AppState.shared.deterministicBase36Hash)
             copyRow(label: "deterministicHex16", value: AppState.shared.deterministicHex16)
+        }
+    }
+
+    private func requestATTFromHUD() {
+        guard ATTrackingManager.trackingAuthorizationStatus == .notDetermined else {
+            AppState.shared.refreshIDFA()
+            bump()
+            return
+        }
+        ATTrackingManager.requestTrackingAuthorization { status in
+            DispatchQueue.main.async {
+                AppState.shared.refreshIDFA(trackingStatus: status)
+                statusMessage = "ATT updated: \(Self.attLabel(for: status))."
+                bump()
+            }
         }
     }
 
@@ -317,7 +340,11 @@ struct TrackingDiagnosticsSheet: View {
     }
 
     private var attStatusLabel: String {
-        switch ATTrackingManager.trackingAuthorizationStatus {
+        Self.attLabel(for: ATTrackingManager.trackingAuthorizationStatus)
+    }
+
+    private static func attLabel(for status: ATTrackingManager.AuthorizationStatus) -> String {
+        switch status {
         case .authorized: return "Authorized"
         case .denied: return "Denied"
         case .notDetermined: return "Not Determined"
