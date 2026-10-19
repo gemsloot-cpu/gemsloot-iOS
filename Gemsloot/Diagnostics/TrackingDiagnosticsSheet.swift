@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 import AppTrackingTransparency
 import WebKit
 

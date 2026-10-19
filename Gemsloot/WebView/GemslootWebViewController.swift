@@ -139,17 +139,12 @@ final class GemslootWebViewController: UIViewController {
     }
 
     func presentDiagnostics() {
-        guard !isPresentingDiagnostics else { return }
-        // Don't stack if a sheet is already up.
-        if presentedViewController != nil { return }
-        isPresentingDiagnostics = true
+        guard presentedViewController == nil else { return }
         let host = TrackingDiagnosticsPresenter.makeHostingController { [weak self] in
             self?.applyBridgeConfigAndReload()
         }
         host.presentationController?.delegate = self
-        present(host, animated: true) { [weak self] in
-            self?.isPresentingDiagnostics = false
-        }
+        present(host, animated: true)
     }
 
     private func updateSafeAreaCSSVariable() {
@@ -287,7 +282,6 @@ extension GemslootWebViewController: UIGestureRecognizerDelegate {
 
 extension GemslootWebViewController: UIAdaptivePresentationControllerDelegate {
     func presentationControllerDidDismiss(_ presentationController: UIPresentationController) {
-        isPresentingDiagnostics = false
         becomeFirstResponder()
     }
 }

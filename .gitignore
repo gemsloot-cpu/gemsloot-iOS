@@ -1,0 +1,35 @@
+# Build / Xcode
+build/
+DerivedData/
+*.xcodeproj/
+*.xcworkspace/
+*.xcuserdata/
+xcuserdata/
+*.xcuserstate
+*.ipa
+*.dSYM.zip
+*.dSYM
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Android APK recon artifacts (keep the repo lean)
+*.apk
+*.apks
+**/apktool*/
+**/jadx*/
+**/decompiled*/
+/tmp/
+tmp/
+
+# Editor / tooling
+.idea/
+*.swp
+*~
+.vscode/
+.cursor/
+.swiftpm/
+Packages/
+Package.resolved
