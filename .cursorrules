@@ -1,0 +1,31 @@
+# Project: Gemsloot Native iOS Wrapper (Swift / WKWebView)
+
+## Core Objective
+Build a lightweight, native iOS app in Swift (iOS 16+ target) that wraps `https://gemsloot.com` in a full-screen `WKWebView` engineered specifically for 100% deterministic offerwall & MMP (AppsFlyer, Adjust, Singular, Branch) attribution and zero cookie drops.
+
+## Mandatory Architecture & Attribution Requirements
+1. **App Tracking Transparency (ATT) & Hardware IDFA:**
+   - Must include `NSUserTrackingUsageDescription` in `Info.plist`.
+   - Must request `ATTrackingManager.requestTrackingAuthorization` before loading the WebView.
+   - Read `ASIdentifierManager.shared().advertisingIdentifier.uuidString` and expose it to the WebView context via `WKUserScript` at `.atDocumentStart` AND as a custom HTTP header / query parameter if applicable.
+
+2. **Native Location Pass-Through:**
+   - Include `NSLocationWhenInUseUsageDescription` in `Info.plist` so native CoreLocation coordinates are available to `WKWebView` without triggering browser IP/VPN false positives.
+
+3. **Zero-Drop Offer Redirect & Deep Link Handling (`WKNavigationDelegate`):**
+   - Offerwalls chain 3 to 6 redirects (`trk.offerwall.com` -> `app.appsflyer.com` -> `itms-appss://` or `https://apps.apple.com/...`).
+   - NEVER block cross-domain redirects or strip `Referer` headers.
+   - Intercept `itms-apps://`, `itms-appss://`, and `apps.apple.com` URLs in `decidePolicyFor navigationAction` and hand them directly to `UIApplication.shared.open(url, options: [:])` so the App Store opens natively without breaking the attribution click chain.
+   - Handle `target="_blank"` / `window.open()` popups in `WKUIDelegate` (`createWebViewWith configuration`): load popup redirect chains inside an overlay `WKWebView` or route them cleanly so offerwalls that open tracking links in new tabs do not silently fail.
+
+4. **Persistent Cookie & Session Storage:**
+   - Use `WKWebsiteDataStore.default()`.
+   - Configure `WKPreferences` with `javaScriptCanOpenWindowsAutomatically = true`.
+   - Synchronize cookies via `WKHTTPCookieStore` so authentication tokens and tracking click IDs persist across app restarts.
+
+5. **Native UX Polish:**
+   - Dark-mode native splash/background matching Gemsloot (`#0F111A`).
+   - Edge-swipe back/forward gesture (`allowsBackForwardNavigationGestures = true`).
+   - Pull-to-refresh (`UIRefreshControl` attached to `webView.scrollView`).
+   - Native floating or bottom mini-toolbar (optional/auto-hiding) with a quick "Copy IDFA", "Reload Offer", and "Open in Safari" fallback button.
+   - GitHub Actions workflow (`.github/workflows/build-ipa.yml`) running on `macos-latest` that compiles an unsigned `.ipa` artifact ready for on-device signing.
