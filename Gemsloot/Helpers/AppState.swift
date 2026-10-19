@@ -206,7 +206,7 @@ final class AppState {
         idfaInjected: Bool = false
     ) {
         let hop = RedirectHop(url: url, statusCodeOrType: statusCodeOrType, idfaInjected: idfaInjected)
-        let apply = { [weak self] in
+        let apply: () -> Void = { [weak self] in
             guard let self else { return }
             self.redirectLogs.append(hop)
             if self.redirectLogs.count > Self.maxRedirectLogs {
@@ -221,7 +221,11 @@ final class AppState {
     }
 
     func clearRedirectLogs() {
-        let clear = { [weak self] in self?.redirectLogs.removeAll() }
+        // Explicit `() -> Void` — optional chaining on `removeAll()` would yield `() -> Void?`
+        // and break `DispatchQueue.main.async(execute:)`.
+        let clear: () -> Void = { [weak self] in
+            self?.redirectLogs.removeAll()
+        }
         if Thread.isMainThread {
             clear()
         } else {
