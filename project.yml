@@ -60,5 +60,6 @@ targets:
       - sdk: AppTrackingTransparency.framework
       - sdk: CoreLocation.framework
       - sdk: Security.framework
+      - sdk: WebKit.framework
     scheme:
       testTargets: []

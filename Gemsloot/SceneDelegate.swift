@@ -12,18 +12,9 @@ final class SceneDelegate: UIResponder, UIWindowSceneDelegate {
 
         let window = UIWindow(windowScene: windowScene)
         window.backgroundColor = .gemslootBackground
-        window.rootViewController = PlaceholderRootViewController()
+        window.rootViewController = GemslootWebViewController()
         window.makeKeyAndVisible()
         self.window = window
-    }
-}
-
-// MARK: - Placeholder root (no WebView yet)
-
-private final class PlaceholderRootViewController: UIViewController {
-    override func viewDidLoad() {
-        super.viewDidLoad()
-        view.backgroundColor = .gemslootBackground
     }
 }
 

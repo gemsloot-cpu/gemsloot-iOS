@@ -11,8 +11,8 @@ final class AppDelegate: UIResponder, UIApplicationDelegate {
         _ application: UIApplication,
         didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
     ) -> Bool {
-        // Ensure a permanent device UUID exists before any later ff / bridge work.
-        _ = AppState.shared.deviceUUID
+        // Ensure Keychain master seed + derived ids exist before WebView / ff bridge work.
+        _ = AppState.shared.keychainUUID
         requestLocationAuthorizationIfNeeded()
         return true
     }
